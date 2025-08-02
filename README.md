@@ -98,39 +98,6 @@ Navigate to **http://localhost:3000** in your web browser.
 
 🎉 **Success!** The coding practice interface should now be running locally.
 
-## 📁 Project Structure
-
-\`\`\`
-coding-practice-interface/
-├── app/                          # Next.js App Router
-│   ├── globals.css              # Global styles and theme
-│   ├── layout.tsx               # Root layout component
-│   ├── page.tsx                 # Home page (problem list)
-│   └── problem/
-│       └── [id]/
-│           └── page.tsx         # Individual problem page
-├── components/                   # React components
-│   ├── ui/                      # shadcn/ui components
-│   │   ├── badge.tsx           # Status badges
-│   │   ├── button.tsx          # Interactive buttons
-│   │   ├── card.tsx            # Content cards
-│   │   ├── select.tsx          # Language selector
-│   │   └── tabs.tsx            # Navigation tabs
-│   ├── code-editor.tsx          # Main code editor component
-│   ├── python-loader.tsx        # Python runtime loader
-│   └── test-results.tsx         # Test results display
-├── lib/                         # Utility libraries
-│   ├── code-executor.ts         # Main code execution logic
-│   ├── python-executor.ts       # Python-specific execution
-│   ├── problems.ts              # Problem definitions and test cases
-│   ├── progress.ts              # Progress tracking utilities
-│   └── utils.ts                 # General utility functions
-├── public/                      # Static assets
-├── package.json                 # Project dependencies
-├── tailwind.config.ts           # Tailwind CSS configuration
-└── tsconfig.json                # TypeScript configuration
-\`\`\`
-
 ## 🎮 How to Use
 
 ### 1. Browse Problems
