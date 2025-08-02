@@ -10,6 +10,7 @@ interface TestResult {
   passed: boolean;
   error?: string;
   executionTime?: number;
+  consoleOutput?: string;
 }
 
 export async function executePythonCode(
@@ -64,10 +65,15 @@ export async function executePythonCode(
 
         // Create the complete Python script to execute
         const pythonScript = `
-# Clear any previous definitions
 import sys
+from io import StringIO
+# Clear any previous definitions
 if '${functionName}' in globals():
     del globals()['${functionName}']
+
+# Redirect stdout to capture print statements
+_stdout = sys.stdout
+sys.stdout = StringIO()
 
 ${code}
 
@@ -75,12 +81,14 @@ ${code}
 def run_test():
     try:
         result = ${getPythonFunctionCall(functionName, testCase.input)}
-        return result
+        output = sys.stdout.getvalue()
+        return {'result': result, 'output': output}
     except Exception as e:
-        raise e
+        output = sys.stdout.getvalue()
+        return {'error': str(e), 'output': output}
 
-# Execute the test
 test_result = run_test()
+sys.stdout = _stdout
 test_result
 `;
 
@@ -97,10 +105,7 @@ test_result
           console.log("🔍 Raw result:", result);
           console.log("🔍 Raw result constructor:", result?.constructor?.name);
           console.log("🔍 Raw result keys:", Object.keys(result || {}));
-          console.log(
-            "🔍 Has toJs method:",
-            typeof result?.toJs === "function"
-          );
+          console.log("🔍 Has toJs method:", typeof result?.toJs === "function");
         } catch (pyodideError: any) {
           console.error("❌ Pyodide execution failed:", pyodideError);
           console.error("❌ Error type:", typeof pyodideError);
@@ -112,17 +117,13 @@ test_result
 
           // Clean up common Python error messages
           if (errorMsg.includes("NameError")) {
-            errorMsg =
-              "NameError: Function or variable not defined. Check your function name and variables.";
+            errorMsg = "NameError: Function or variable not defined. Check your function name and variables.";
           } else if (errorMsg.includes("SyntaxError")) {
-            errorMsg =
-              "SyntaxError: Invalid Python syntax. Check your code for syntax errors.";
+            errorMsg = "SyntaxError: Invalid Python syntax. Check your code for syntax errors.";
           } else if (errorMsg.includes("IndentationError")) {
-            errorMsg =
-              "IndentationError: Incorrect indentation. Python requires consistent indentation.";
+            errorMsg = "IndentationError: Incorrect indentation. Python requires consistent indentation.";
           } else if (errorMsg.includes("TypeError")) {
-            errorMsg =
-              "TypeError: Invalid operation or function call. Check your function parameters.";
+            errorMsg = "TypeError: Invalid operation or function call. Check your function parameters.";
           }
 
           throw new Error(errorMsg);
@@ -131,29 +132,50 @@ test_result
         const endTime = performance.now();
         const executionTime = Math.round(endTime - startTime);
 
-        console.log(
-          "✅ Test case",
-          i + 1,
-          "executed successfully in",
-          executionTime,
-          "ms"
-        );
+        console.log("✅ Test case", i + 1, "executed successfully in", executionTime, "ms");
 
-        // Parse the result
-        console.log("🔧 Starting result formatting...");
-        console.log("🔧 Input to formatPythonResult:", result);
-        const actualStr = formatPythonResult(result);
+        // Parse the result and extract output
+        let actualStr = "";
+        let consoleOutput = "";
+        let errorMessage = undefined;
+        if (result && typeof result === "object" && typeof result.toJs === "function") {
+          const jsResult = result.toJs();
+          if (jsResult instanceof Map) {
+            actualStr = formatPythonResult(jsResult.get("result"));
+            consoleOutput = String(jsResult.get("output") ?? "");
+            errorMessage = jsResult.get("error") ? String(jsResult.get("error")) : undefined;
+          } else {
+            actualStr = formatPythonResult(jsResult.result);
+            consoleOutput = String(jsResult.output ?? "");
+            errorMessage = jsResult.error ? String(jsResult.error) : undefined;
+          }
+        } else if (result && typeof result === "object" && ("result" in result || "error" in result)) {
+          if ("result" in result) {
+            actualStr = formatPythonResult(result.result);
+          }
+          if ("output" in result) {
+            consoleOutput = String(result.output);
+          }
+          if ("error" in result) {
+            errorMessage = String(result.error);
+          }
+        } else {
+          actualStr = formatPythonResult(result);
+        }
         const expectedStr = testCase.expected;
 
         console.log("🔧 Formatted actual result:", actualStr);
         console.log("🔧 Expected result:", expectedStr);
+        console.log("🔧 Console output:", consoleOutput);
 
-        const passed = actualStr === expectedStr;
+        const passed = actualStr === expectedStr && !errorMessage;
 
         console.log("📊 Test case", i + 1, "result:", {
           actual: actualStr,
           expected: expectedStr,
           passed,
+          consoleOutput,
+          error: errorMessage,
         });
 
         results.push({
@@ -162,6 +184,8 @@ test_result
           actual: actualStr,
           passed,
           executionTime,
+          consoleOutput,
+          error: errorMessage,
         });
       } catch (error) {
         const endTime = performance.now();

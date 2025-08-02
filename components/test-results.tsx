@@ -11,6 +11,7 @@ interface TestResult {
   passed: boolean
   error?: string
   executionTime?: number
+  consoleOutput?: string
 }
 
 interface TestResultsProps {
@@ -100,6 +101,12 @@ export function TestResults({ results, allPassed, isSubmission = false }: TestRe
                     <code className="ml-2 bg-white px-2 py-1 rounded">{result.input}</code>
                   </div>
                 )}
+                {result.consoleOutput && (
+                  <div className="text-xs">
+                    <span className="font-medium text-gray-700">Console Output:</span>
+                    <code className="ml-2 bg-white px-2 py-1 rounded whitespace-pre-wrap">{result.consoleOutput}</code>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-2 text-xs">
@@ -121,6 +128,12 @@ export function TestResults({ results, allPassed, isSubmission = false }: TestRe
                     {result.actual}
                   </code>
                 </div>
+                {result.consoleOutput && (
+                  <div>
+                    <span className="font-medium text-gray-700">Console Output:</span>
+                    <code className="ml-2 bg-white px-2 py-1 rounded whitespace-pre-wrap">{result.consoleOutput}</code>
+                  </div>
+                )}
               </div>
             )}
           </div>
